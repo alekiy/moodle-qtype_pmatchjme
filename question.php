@@ -39,16 +39,29 @@ class qtype_pmatchjme_question extends qtype_pmatch_question {
         return array('answer' => PARAM_RAW, 'jme' => PARAM_RAW, 'mol' => PARAM_RAW);
     }
 
-    public function check_atom_count($response) {
-        $correctanswer = $this->get_correct_answer();
-        $smilesresponse = preg_replace('!\s!', '', $response['answer']);
-        $matches = array();
-        $pmatchanswer = preg_replace('!\s!', '', $correctanswer->answer);
-        preg_match('!match\((.+)\)$!iA', $pmatchanswer, $matches);
-        $correctsmiles = $matches[1];
+    public function get_correct_response() {
+        $response = parent::get_correct_response();
+        if (!$response) {
+            return $response;
+        }
 
-        $answerparts = $this->count_compound_parts($correctsmiles);
+        $matches = array();
+        $pmatchanswer = preg_replace('!\s!', '', $response['answer']);
+        if (preg_match('!match\((.+)\)$!iA', $pmatchanswer, $matches)) {
+            return array('answer' => $matches[1]);
+        } else {
+            return null;
+        }
+    }
+
+    public function check_atom_count($response) {
+        $correctresponse = $this->get_correct_response();
+        $pmatchanswer = $correctresponse['answer'];
+        $answerparts = $this->count_compound_parts($pmatchanswer);
+
+        $smilesresponse = preg_replace('!\s!', '', $response['answer']);
         $responseparts = $this->count_compound_parts($smilesresponse);
+
         $messages = array();
         $anyerror = (count($answerparts) != count($responseparts));
         $i = 0;
@@ -62,8 +75,8 @@ class qtype_pmatchjme_question extends qtype_pmatch_question {
         }
 
         if (!$anyerror) {
-            //count of smiles elements for student response and correct answer is the same
-            //clear all other messages and replace it with this one :
+            // Count of smiles elements for student response and correct answer is the same
+            // clear all other messages and replace it with this one.
             $messages = array(get_string('smilescorrectcount', 'qtype_pmatchjme'));
         }
         return $messages;
